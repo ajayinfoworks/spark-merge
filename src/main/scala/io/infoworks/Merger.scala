@@ -3,11 +3,9 @@ package io.infoworks
 import java.util.concurrent.Callable
 
 import org.apache.spark.SparkContext
-import org.apache.spark.sql.{functions => f}
 
 /**
-  * Merges incremental data into existing data by doing a 'full outer join' & selecting 'coalesce' values of each
-  * column.
+  * Merges incremental data into existing data by doing a 'full outer join' & selecting new value, if it's available.
   */
 class Merger(sc: SparkContext, existingPath: String, incrementalPath: String, outputPath: String, keyColumn: String)
   extends Callable[Boolean] {
@@ -27,16 +25,17 @@ class Merger(sc: SparkContext, existingPath: String, incrementalPath: String, ou
       // Create temporary table of incremental data.
       val incremental = sqlContext.read.format("orc").load(incrementalPath)
       val incrementalTable = "incremental_%d".format(random.nextInt(1000))
-      incremental.registerTempTable(incrementalTable) // add random num
+      incremental.registerTempTable(incrementalTable)
 
       // The following statements build a 'select' clause in the following format:
-      //   SELECT COALESCE(incremental.empno, existing.empno) as empno,COALESCE(incremental.name, existing.name) as name,
-      //     COALESCE(incremental.deptno, existing.deptno) as deptno FROM existing FULL OUTER JOIN incremental
-      //     ON existing.empno = incremental.empno";
+      // SELECT IF(ISNULL(incremental_446.empno), existing_973.empno, incremental_446.empno) as empno,
+      //   IF(ISNULL(incremental_446.empno), existing_973.name, incremental_446.name) as name,
+      //   IF(ISNULL(incremental_446.empno), existing_973.deptno, incremental_446.deptno) as deptno
+      // FROM existing_973 FULL OUTER JOIN incremental_446 ON existing_973.empno = incremental_446.empno
 
       var select: String = "SELECT "
-      select = select + existing.columns.map(colName => "COALESCE(%s.%s, %s.%s) as %s".format(incrementalTable, colName,
-        existingTable, colName, colName)).mkString(",")
+      select = select + existing.columns.map(colName => "IF(ISNULL(%s.%s), %s.%s, %s.%s) as %s".format(incrementalTable,
+        keyColumn, existingTable, colName, incrementalTable, colName, colName)).mkString(",")
       select = select + " FROM %s FULL OUTER JOIN %s ON %s.%s = %s.%s".format(existingTable, incrementalTable,
         existingTable, keyColumn, incrementalTable, keyColumn)
 

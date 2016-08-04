@@ -9,10 +9,10 @@ import scala.collection.{mutable => m}
 
 /**
   * Merges incremental files with existing files. Performs following actions:
-  *   1) Retrieves & validates command line arguments.
-  *   2) Starts a thread for each combination of existing & incremental directory and puts this thread in a thread pool.
+  * 1) Retrieves & validates command line arguments.
+  * 2) Starts a thread for each combination of existing & incremental directory and puts this thread in a thread pool.
   */
-object MergeDriver extends {
+object MergeDriver {
 
   def main(args: Array[String]): Unit = {
 
@@ -52,7 +52,7 @@ object MergeDriver extends {
     }
 
     val existingPaths = cmd.getOptionValue("e").split(",").map(_.trim)
-    val incrementalPaths = cmd.getOptionValue("i").split(",")
+    val incrementalPaths = cmd.getOptionValue("i").split(",").map(_.trim)
     if (existingPaths.length != incrementalPaths.length) {
       formatter.printHelp("No. of paths in 'existing' should be same as no. of paths in 'incremental'", options)
     }
