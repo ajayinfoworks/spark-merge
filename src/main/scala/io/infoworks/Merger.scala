@@ -19,19 +19,19 @@ class Merger(sc: SparkContext, existingPath: String, incrementalPath: String, ou
 
       // Create temporary table of existing data.
       val existing = sqlContext.read.format("orc").load(existingPath)
-      val existingTable = "existing_%d".format(random.nextInt(1000))
+      val existingTable = "e_%d".format(random.nextInt(10000))
       existing.registerTempTable(existingTable)
 
       // Create temporary table of incremental data.
       val incremental = sqlContext.read.format("orc").load(incrementalPath)
-      val incrementalTable = "incremental_%d".format(random.nextInt(1000))
+      val incrementalTable = "i_%d".format(random.nextInt(10000))
       incremental.registerTempTable(incrementalTable)
 
       // The following statements build a 'select' clause in the following format:
-      // SELECT IF(ISNULL(incremental_446.empno), existing_973.empno, incremental_446.empno) as empno,
-      //   IF(ISNULL(incremental_446.empno), existing_973.name, incremental_446.name) as name,
-      //   IF(ISNULL(incremental_446.empno), existing_973.deptno, incremental_446.deptno) as deptno
-      // FROM existing_973 FULL OUTER JOIN incremental_446 ON existing_973.empno = incremental_446.empno
+      // SELECT IF(ISNULL(i_446.empno), e_973.empno, i_446.empno) as empno,
+      //   IF(ISNULL(i_446.empno), e_973.name, i_446.name) as name,
+      //   IF(ISNULL(i_446.empno), e_973.deptno, i_446.deptno) as deptno
+      // FROM e_973 FULL OUTER JOIN i_446 ON e_973.empno = i_446.empno
 
       var select: String = "SELECT "
       select = select + existing.columns.map(colName => "IF(ISNULL(%s.%s), %s.%s, %s.%s) as %s".format(incrementalTable,

@@ -30,7 +30,7 @@ object MergeDriver {
     output.setRequired(true)
     options.addOption(output)
 
-    val poolSize = new Option("p", "pool size", true, "number of directories to process simulteneously. Default is ALL")
+    val poolSize = new Option("p", "pool size", true, "number of directories to process simultaneously. Default is ALL")
     options.addOption(poolSize)
 
     val key = new Option("k", "key column name", true, "Key Column Name")
@@ -82,7 +82,7 @@ object MergeDriver {
       println("Submitting job for path: %s".format(existingPaths(idx)))
       val callable: Callable[Boolean] = new Merger(sc, existingPaths(idx), incrementalPaths(idx), outputPaths(idx), keyColumn)
 
-      // Submit the method to the thread pool.
+      // Submit the instance to the thread pool.
       val future: Future[Boolean] = executor.submit(callable)
 
       // Put the 'future' object in a Map so we can check return value after the thread completes.
