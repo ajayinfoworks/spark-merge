@@ -36,6 +36,9 @@ object MergeDriver {
     val key = new Option("k", "key column name", true, "Key Column Name")
     options.addOption(key)
 
+    val num = new Option("n", "number of output files per partion", true, "No. of output files per partition")
+    options.addOption(num)
+
     val parser = new GnuParser()
     val formatter = new HelpFormatter()
 
@@ -52,7 +55,11 @@ object MergeDriver {
     }
 
     val existingPaths = cmd.getOptionValue("e").split(",").map(_.trim)
+    println ("Existing: " + existingPaths.deep.mkString("\n"))
+
     val incrementalPaths = cmd.getOptionValue("i").split(",").map(_.trim)
+    println ("Incremental: " + incrementalPaths.deep.mkString("\n"))
+
     if (existingPaths.length != incrementalPaths.length) {
       formatter.printHelp("No. of paths in 'existing' should be same as no. of paths in 'incremental'", options)
     }
@@ -60,17 +67,20 @@ object MergeDriver {
     if (existingPaths.length != outputPaths.length) {
       formatter.printHelp("No. of paths in 'existing' should be same as no. of paths in 'output'", options)
     }
+    println ("Output: " + outputPaths.deep.mkString("\n"))
+
     val threadPoolSize = cmd.getOptionValue("p", existingPaths.length.toString).toInt
     if (threadPoolSize < 0 || threadPoolSize > existingPaths.length) {
       formatter.printHelp("Pool size value is incorrect", options)
     }
     val keyColumn = cmd.getOptionValue("k", "")
+    val noOfOutputFiles = cmd.getOptionValue("n", "").toInt
 
-    System.exit(merge(existingPaths, incrementalPaths, outputPaths, threadPoolSize, keyColumn))
+    System.exit(merge(existingPaths, incrementalPaths, outputPaths, threadPoolSize, keyColumn, noOfOutputFiles))
   }
 
   def merge(existingPaths: Array[String], incrementalPaths: Array[String], outputPaths: Array[String],
-            threadPoolSize: Int, keyColumn: String): Int = {
+            threadPoolSize: Int, keyColumn: String, noOfOutputFiles:Int): Int = {
 
     val conf = new SparkConf().setAppName("Merge process...")
     val sc = new SparkContext(conf)
@@ -80,7 +90,8 @@ object MergeDriver {
 
     for (idx <- existingPaths.indices) {
       println("Submitting job for path: %s".format(existingPaths(idx)))
-      val callable: Callable[Boolean] = new Merger(sc, existingPaths(idx), incrementalPaths(idx), outputPaths(idx), keyColumn)
+      val callable: Callable[Boolean] = new Merger(sc, existingPaths(idx), incrementalPaths(idx), outputPaths(idx),
+        keyColumn, noOfOutputFiles)
 
       // Submit the instance to the thread pool.
       val future: Future[Boolean] = executor.submit(callable)

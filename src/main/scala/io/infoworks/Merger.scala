@@ -7,7 +7,8 @@ import org.apache.spark.SparkContext
 /**
   * Merges incremental data into existing data by doing a 'full outer join' & selecting new value, if it's available.
   */
-class Merger(sc: SparkContext, existingPath: String, incrementalPath: String, outputPath: String, keyColumn: String)
+class Merger(sc: SparkContext, existingPath: String, incrementalPath: String, outputPath: String, keyColumn: String,
+             noOfOutputFiles: Int)
   extends Callable[Boolean] {
 
   val random = scala.util.Random
@@ -45,11 +46,11 @@ class Merger(sc: SparkContext, existingPath: String, incrementalPath: String, ou
 
       // Run the Sql & save it in the ORC format
       // Do this in version 1.5 & above: sqlContext.sql(select).write.orc(outputPath)
-      sqlContext.sql(select).write.format("orc").save(outputPath)
+      sqlContext.sql(select).coalesce(noOfOutputFiles).write.format("orc").save(outputPath)
 
     } catch {
       case e: Exception =>
-        println("Exception: " + e.getMessage)
+        println("My Exception: " + e.getMessage)
         return false
     }
     true
